@@ -32,7 +32,32 @@ def view_recipe_tree() -> None:
     item = st.selectbox("item", repo.results.keys(), index=None)
     if item:
         st.json([t.to_dict() for t in repo.ingredient_tree(item)])
-        # st.json([asdict(t) for t in repo.ingredient_tree(item)])
+
+
+def view_totals_for_recipe() -> None:
+    repo = RecipeRepo(recipe_store(st.session_state["domain"]))
+    left, right = st.columns(2)
+    with left:
+        count = st.number_input("Rate", min_value=0.0, value=1.0)
+    with right:
+        item = st.selectbox("Item", repo.results.keys(), index=None)
+
+    if item:
+        st.json([t.totals(count) for t in repo.ingredient_tree(item)])
+
+
+def recipe_step_by_step() -> None:
+    repo = RecipeRepo(recipe_store(st.session_state["domain"]))
+    left, right = st.columns(2)
+    with left:
+        count = st.number_input("Rate", min_value=0.0, value=1.0)
+    with right:
+        item = st.selectbox("Item", repo.results.keys(), index=None)
+
+    if item:
+        trees = list(repo.ingredient_tree(item))
+        if len(trees) == 1:
+            _show_steps(trees[0].as_steps(count))
 
 
 def _order_recipes_by_context_and_result(
@@ -44,3 +69,9 @@ def _order_recipes_by_context_and_result(
         for n in r.results.keys():
             result.setdefault(r.context, {}).setdefault(n, []).append(repr_)
     return result
+
+
+def _show_steps(steps: list[tuple[str, float]]) -> None:
+    st.divider()
+    for name, rate in steps:
+        st.checkbox(f"{rate}x {name}")
