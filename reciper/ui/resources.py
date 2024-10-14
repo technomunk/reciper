@@ -1,8 +1,8 @@
-import streamlit as st
+from functools import cache
 
 from reciper.db import RecipeStore
 
 
-@st.cache_resource
+@cache
 def recipe_store(domain: str) -> RecipeStore:
     return RecipeStore(domain)

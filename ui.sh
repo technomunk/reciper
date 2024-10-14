@@ -1,1 +1,1 @@
-PYTHONPATH=$PYTHONPATH:reciper poetry run streamlit run reciper/ui/__init__.py
+PYTHONPATH=$PYTHONPATH:reciper poetry run py reciper/ui/__main__.py

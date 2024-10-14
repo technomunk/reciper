@@ -1,6 +1,6 @@
 from typing import Generator
 import click
-from reciper.recipe import Recipe
+from reciper.recipe.recipe import Recipe
 
 
 class RecipePrompt[T: Recipe]:
