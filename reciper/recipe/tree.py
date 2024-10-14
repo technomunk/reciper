@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from typing import NotRequired, Self, TypedDict, Union
+from typing import Iterable, NotRequired, Protocol, Self, TypedDict, Union
 
-from reciper.db import RecipeStore
-from reciper.recipe.recipe import Recipe
+from reciper.recipe import Recipe
 
 RecursiveSteps = list[Union[str, tuple[str, "RecursiveSteps"]]]
 
@@ -28,20 +27,12 @@ class RecipeTree:
     ingredients: list[Self]
 
     @property
-    def id(self) ->str:
+    def id(self) -> str:
         return self.item.lower().replace(" ", "-")
 
-    def as_dict(self, id_prefix: str = "") -> TreeDict:
-        result: TreeDict = {
-            "id": id_prefix + self.id,
-            "rate": self.rate,
-            "label": self.item,
-        }
-        if self.context:
-            result["context"] = self.context
-        if self.ingredients:
-            result["children"] = [i.as_dict(f"{id_prefix}_{self.id}_") for i in self.ingredients]
-        return result
+
+class RecipeStoreProto(Protocol):
+    def load_recipes(self) -> Iterable[Recipe]: ...
 
 
 class RecipeRepo:
@@ -49,7 +40,7 @@ class RecipeRepo:
     ingredients: dict[str, list[Recipe]]
     items: set[str]
 
-    def __init__(self, store: RecipeStore) -> None:
+    def __init__(self, store: RecipeStoreProto) -> None:
         self.results = {}
         self.ingredients = {}
         self.items = set()

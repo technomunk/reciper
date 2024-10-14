@@ -1,3 +1,5 @@
+from functools import cache
+import os
 from typing import Iterable
 from pydantic import TypeAdapter
 
@@ -42,3 +44,13 @@ class RecipeStore:
         json_data = _list_adapter.dump_json(recipes)
         with open(self._filename, "wb") as f:
             f.write(json_data)
+
+
+@cache
+def known_domains() -> set[str]:
+    result: set[str] = set()
+    for dir_ in os.listdir(".recipes"):
+        name, ext = os.path.splitext(dir_)
+        if ext.lower() == ".json":
+            result.add(name)
+    return result

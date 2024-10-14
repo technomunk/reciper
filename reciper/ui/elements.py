@@ -1,72 +1,148 @@
+from functools import partial
+from typing import Callable, Literal, TypedDict
+
 import pydantic
-import streamlit as st
+from nicegui import ui as gui
 
-from reciper.recipe import Recipe
-from reciper.tree import RecursiveSteps
-from reciper.ui.resources import recipe_store
+from reciper.recipe import Recipe, RecipeTree
+from reciper.ui.glue import as_dict
 
 
-def recipe_form() -> Recipe | None:
-    with st.form("recipe", enter_to_submit=False):
-        context = st.text_input("Context", autocomplete=f"{st.session_state['domain']}-context")
-        results = _item_input("result")
-        ingredients = _item_input("ingredient")
+class _RecipeFormInputs(TypedDict):
+    context: gui.input
+    results: list[tuple[gui.number, gui.input]]
+    ingredients: list[tuple[gui.number, gui.input]]
 
-        recipe = None
+
+class RecipeForm(gui.card):
+    _form: _RecipeFormInputs
+    on_submit: Callable[[Recipe], None]
+
+    def __init__(self, on_submit: Callable[[Recipe], None]) -> None:
+        super().__init__()
+        self.on_submit = on_submit
+        with self:
+            section_label("Record new recipe")
+
+            self._form = {
+                "context": gui.input("Context").classes("w-full"),
+                "results": [],
+                "ingredients": [],
+            }
+
+            with gui.column().classes("w-full") as self._results:
+                section_label("Results")
+                with gui.row().classes("w-full place-content-between"):
+                    rate = positive_number("Rate")
+                    item = item_title("Item")
+                    self._form["results"].append((rate, item))
+
+                with gui.row().classes("w-full place-content-around"):
+                    gui.button(
+                        "-1", on_click=partial(self._remove_row, "results"), color="negative"
+                    )
+                    gui.button("+1", on_click=partial(self._add_row, "results"), color="positive")
+
+            gui.separator()
+
+            with gui.column().classes("w-full") as self._ingredients:
+                section_label("Ingredients")
+                with gui.row().classes("w-full place-content-between"):
+                    rate = positive_number("Rate")
+                    item = item_title("Item")
+                    self._form["ingredients"].append((rate, item))
+
+                with gui.row().classes("w-full place-content-around"):
+                    gui.button(
+                        "-1", on_click=partial(self._remove_row, "ingredients"), color="negative"
+                    )
+                    gui.button(
+                        "+1", on_click=partial(self._add_row, "ingredients"), color="positive"
+                    )
+
+            gui.separator()
+
+            gui.button("Save", on_click=self._try_submit, color="positive").classes(
+                "place-self-center"
+            )
+
+    def _try_submit(self) -> None:
+        results = _gather_dict(self._form["results"])
+        ingredients = _gather_dict(self._form["ingredients"])
         try:
-            recipe = Recipe(results=results, ingredients=ingredients, context=context)
-        except (pydantic.ValidationError, TypeError):
-            pass
+            recipe = Recipe(
+                context=self._form["context"].value or "",
+                results=results,
+                ingredients=ingredients,
+            )
+            self.on_submit(recipe)
+        except pydantic.ValidationError as err:
+            gui.notify(str(err), type="negative", position="top", multi_line=True)
+            # TODO: forward errors to relevant element
 
-        if st.form_submit_button(type="primary"):
-            return recipe
+    def _remove_row(self, section: Literal["results", "ingredients"]) -> None:
+        if not self._form[section]:
+            return
+
+        next(self._form[section][-1][0].ancestors()).clear()
+        self._form[section].pop()
+
+    def _add_row(self, section: Literal["results", "ingredients"]) -> None:
+        with gui.row().classes("w-full place-content-between") as row:
+            rate = positive_number("Rate")
+            item = item_title("Item")
+            self._form[section].append((rate, item))
+        if section == "results":
+            row.move(self._results, len(self._form[section]))
+        else:
+            row.move(self._ingredients, len(self._form[section]))
 
 
-@st.dialog("Save recipe?")
-def recipe_save_prompt(recipe: Recipe) -> None:
-    st.json(recipe)
-    left, right = st.columns(2)
-    with left:
-        if st.button("Cancel"):
-            st.rerun()
-
-    with right:
-        if st.button("Save", type="primary"):
-            recipe_store(st.session_state["domain"]).add_recipe(recipe)
-            st.rerun()
+def recipe_view(recipe: Recipe | RecipeTree, *, show_ticks: bool = False) -> gui.tree:
+    result = gui.tree([as_dict(recipe)], tick_strategy="leaf" if show_ticks else None)
+    return result
 
 
-def checkmark_graph(items: RecursiveSteps) -> None:
-    st.markdown(_as_markdown(items))
+def confirm_save_dialog(recipe: Recipe, on_confirm: Callable[[], None]) -> gui.dialog:
+    with gui.dialog(value=True) as result:
+        def _on_confirm_click() -> None:
+            on_confirm()
+            _close_and_clear(result)
 
-@st.fragment()
-def _item_input(category: str) -> dict[str, float]:
-    if f"{category}_count" not in st.session_state:
-        st.session_state[f"{category}_count"] = 1
-    count: int = st.session_state[f"{category}_count"]
+        with gui.card():
+            recipe_view(recipe).expand()
 
-    st.text(category.capitalize() + "s")
+            with gui.row().classes("w-full place-content-between"):
+                gui.button("Cancel", on_click=lambda: _close_and_clear(result), color="negative")
+                gui.button("Confirm", on_click=_on_confirm_click, color="positive")
 
-    ingredients: dict[str, float] = {}
-    for i in range(count):
-        left, right = st.columns(2)
-        with left:
-            rate = st.number_input("Rate", min_value=0.0, value=1.0, key=f"{category}_rate_{i}")
-        with right:
-            name = st.text_input("Name", key=f"{category}_name_{i}")
+    return result
 
-        if name:
-            ingredients[name] = rate
 
-    left, right = st.columns(2)
-    with left:
-        if st.form_submit_button(f"1 less {category}"):
-            st.session_state[f"{category}_count"] = max(1, count - 1)
-            st.rerun(scope="fragment")
+def label(text: str, classes: str = "text-lg") -> gui.label:
+    return gui.label(text).classes(classes)
 
-    with right:
-        if st.form_submit_button(f"1 more {category}"):
-            st.session_state[f"{category}_count"] = count + 1
-            st.rerun(scope="fragment")
 
-    return ingredients
+def section_label(text: str, classes: str = "text-bold place-self-center") -> gui.label:
+    return label(text).classes(classes)
+
+
+def positive_number(label: str) -> gui.number:
+    return gui.number(label, value=1.0, min=0.0).classes("w-auto")
+
+
+def item_title(label: str) -> gui.input:
+    return gui.input(label).props("clearable").classes("w-auto")
+
+
+def _gather_dict(inputs: list[tuple[gui.number, gui.input]]) -> dict[str, float]:
+    result: dict[str, float] = {}
+    for rate, item in inputs:
+        if item.value and float(rate.value) > 0:
+            result[item.value] = float(rate.value)
+    return result
+
+
+def _close_and_clear(dialog: gui.dialog) -> None:
+    dialog.close()
+    dialog.clear()

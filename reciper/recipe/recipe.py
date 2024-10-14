@@ -5,7 +5,6 @@ from pydantic import (
     BaseModel,
     PositiveFloat,
     StringConstraints,
-    ValidationError,
 )
 
 
@@ -13,7 +12,7 @@ def _validate_item_dict(value: dict[str, PositiveFloat]) -> dict[str, PositiveFl
     result = {n.lower().strip(): r for n, r in value.items()}
     for name in result.keys():
         if not name:
-            raise ValidationError("missing name")
+            raise ValueError("missing name")
     return result
 
 
@@ -23,7 +22,7 @@ class _SupportsLen(Protocol):
 
 def _at_least_one[T: _SupportsLen](value: T) -> T:
     if len(value) < 1:
-        raise ValidationError("Must be at least one")
+        raise ValueError("Must be at least one")
     return value
 
 

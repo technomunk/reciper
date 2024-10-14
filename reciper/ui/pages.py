@@ -5,18 +5,39 @@ from nicegui import ui as gui
 from nicegui.elements.tree import Tree as GUITree
 from nicegui.events import ValueChangeEventArguments
 
-from reciper.recipe import RecipeRepo
-
-# from reciper.ui.elements import recipe_form, recipe_save_prompt
+from reciper.db import known_domains
+from reciper.recipe import Recipe, RecipeRepo
+from reciper.ui.elements import RecipeForm, confirm_save_dialog, recipe_view
 from reciper.ui.resources import recipe_store
+from reciper.ui.theme import center, frame
 
 router = APIRouter()
 
-# @gui.page("{domain}/record-recipe")
-# def record_recipe(domain: str) -> None:
-#     gui.label(f"Create {domain} recipe")
-#     if recipe := recipe_form():
-#         recipe_save_prompt(recipe)
+
+@router.page("/")
+def pick_domain() -> None:
+    domains = known_domains()
+
+    def on_change(event: ValueChangeEventArguments) -> None:
+        if not event.value:
+            return
+        domain: str = event.value.lower()
+        domains.add(domain)
+        gui.navigate.to(f"/{domain}/record-recipe")
+
+    with center():
+        gui.select(list(domains), label="Domain", on_change=on_change)
+
+
+@router.page("/{domain}/record-recipe")
+def record_recipe(domain: str) -> None:
+    gui.page_title(f"Record {domain} recipe")
+
+    def on_submit(recipe: Recipe) -> None:
+        confirm_save_dialog(recipe, lambda: recipe_store(domain).add_recipe(recipe))
+
+    with frame(domain).classes("w-1/2"):
+        RecipeForm(on_submit).classes("w-full")
 
 
 @router.page("/{domain}/view-recipe")
@@ -76,23 +97,20 @@ def _recipe_view(domain: str, tick: bool) -> None:
     repo = RecipeRepo(recipe_store(domain))
 
     tree: GUITree | None = None
-    column = gui.column().classes("place-self-center min-w-80")
+    frame_ = frame(domain)
 
     def select_item(event: ValueChangeEventArguments) -> None:
         nonlocal tree
         if tree is not None:
-            tree.delete()
+            tree.clear()
             tree = None
 
         if not event.value:
             return
 
-        with column:
-            tree = gui.tree([repo.recipe_tree(event.value).as_dict()], tick_strategy="leaf" if tick else None)
-        tree.add_slot(
-            "default-header",
-            '<span :props="props">{{props.node.rate}}x {{props.node.label}}</span>',
-        )
+        recipe = repo.recipe_tree(event.value)
+        with frame_:
+            recipe_view(recipe, show_ticks=tick).expand()
 
-    with column:
-        gui.select(list(repo.results.keys()), label="Item", on_change=select_item)
+    with frame_:
+        gui.select(list(repo.results.keys()), label="Item", on_change=select_item).classes("w-full")

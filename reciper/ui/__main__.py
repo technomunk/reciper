@@ -6,4 +6,4 @@ from reciper.ui.pages import router
 
 app.include_router(router)
 
-gui.run(title="Recipe engine")
+gui.run(title="Recipe engine", dark=None)
