@@ -11,6 +11,7 @@ _list_adapter = TypeAdapter(list[Recipe])
 class RecipeStore:
     domain: str
     _recipes: list[Recipe] = []
+    _known_items: set[str] = set()
 
     def __init__(self, domain: str) -> None:
         self.domain = domain
@@ -18,6 +19,14 @@ class RecipeStore:
     @property
     def _filename(self) -> str:
         return f".recipes/{self.domain}.json"
+
+    @property
+    def known_items(self) -> list[str]:
+        return list(self._known_items)
+
+    def _load_known_items(self) -> None:
+        for recipe in self._recipes:
+            self._known_items.update(recipe.results.keys(), recipe.ingredients.keys())
 
     def load_recipes(self) -> list[Recipe]:
         if self._recipes:
@@ -27,6 +36,7 @@ class RecipeStore:
             with open(self._filename, "rb") as f:
                 json_data = f.read()
             self._recipes = _list_adapter.validate_json(json_data)
+            self._load_known_items()
             return self._recipes
         except FileNotFoundError:
             return []
@@ -40,6 +50,7 @@ class RecipeStore:
     def add_recipe(self, recipe: Recipe) -> None:
         recipes = self.load_recipes()
         recipes.append(recipe)
+        self._known_items.update(recipe.results.keys(), recipe.ingredients.keys())
 
         json_data = _list_adapter.dump_json(recipes)
         with open(self._filename, "wb") as f:

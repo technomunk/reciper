@@ -1,0 +1,69 @@
+[
+    {
+        "context": "craft 3x3",
+        "results": {
+            "64k me storage component": 1.0
+        },
+        "ingredients": {
+            "glowstone dust": 4.0,
+            "16k me storage component": 3.0,
+            "calculation processor": 1.0,
+            "quartz glass": 1.0
+        }
+    },
+    {
+        "context": "circuit fabricator",
+        "results": {
+            "calculation processor": 1.0
+        },
+        "ingredients": {
+            "printed sillicon": 1.0,
+            "redstone dust": 1.0,
+            "printed calculation circuit": 1.0
+        }
+    },
+    {
+        "context": "circuit fabricator",
+        "results": {
+            "printed calculation circuit": 1.0
+        },
+        "ingredients": {
+            "certus quartz crystal": 1.0
+        }
+    },
+    {
+        "context": "3x3 craft",
+        "results": {
+            "16k me storage component": 1.0
+        },
+        "ingredients": {
+            "glowstone dust": 4.0,
+            "4k me storage component": 3.0,
+            "calculation processor": 1.0,
+            "quartz glass": 1.0
+        }
+    },
+    {
+        "context": "3x3 craft",
+        "results": {
+            "4k me storage component": 1.0
+        },
+        "ingredients": {
+            "redstone dust": 4.0,
+            "1k me storage component": 3.0,
+            "calculation processor": 1.0,
+            "quartz glass": 1.0
+        }
+    },
+    {
+        "context": "3x3 craft",
+        "results": {
+            "1k me storage component": 1.0
+        },
+        "ingredients": {
+            "redstone dust": 4.0,
+            "certus quartz crystal": 4.0,
+            "logic processor": 1.0
+        }
+    }
+]

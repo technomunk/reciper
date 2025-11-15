@@ -9,7 +9,7 @@ class RecipeDict(TypedDict):
     label: str
     context: NotRequired[str]
     children: NotRequired[list["RecipeDict"]]
-
+ 
 
 @singledispatch
 def as_dict(recipe: Recipe | RecipeTree) -> RecipeDict:

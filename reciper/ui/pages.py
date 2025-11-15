@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
 from nicegui import APIRouter
 from nicegui import ui as gui
@@ -6,8 +6,8 @@ from nicegui.elements.tree import Tree as GUITree
 from nicegui.events import ValueChangeEventArguments
 
 from reciper.db import known_domains
-from reciper.recipe import Recipe, RecipeRepo
-from reciper.ui.elements import RecipeForm, confirm_save_dialog, recipe_view
+from reciper.recipe import RecipeRepo
+from reciper.ui.elements import RecipeForm, basic_component_view, recipe_view
 from reciper.ui.resources import recipe_store
 from reciper.ui.theme import center, frame
 
@@ -33,17 +33,14 @@ def pick_domain() -> None:
 def record_recipe(domain: str) -> None:
     gui.page_title(f"Record {domain} recipe")
 
-    def on_submit(recipe: Recipe) -> None:
-        confirm_save_dialog(recipe, lambda: recipe_store(domain).add_recipe(recipe))
-
     with frame(domain).classes("w-1/2"):
-        RecipeForm(on_submit).classes("w-full")
+        RecipeForm(recipe_store(domain)).classes("w-full")
 
 
 @router.page("/{domain}/view-recipe")
 def view_recipe(domain: str) -> None:
     gui.page_title(f"View {domain} recipe")
-    _recipe_view(domain, False)
+    _recipe_view(domain, mode="view")
 
 
 # def view_recipes() -> None:
@@ -75,7 +72,7 @@ def view_recipe(domain: str) -> None:
 @router.page("/{domain}/check-recipe")
 def recipe_step_by_step(domain: str) -> None:
     gui.page_title(f"Check {domain} recipe")
-    _recipe_view(domain, True)
+    _recipe_view(domain, mode="check")
 
 
 # def _order_recipes_by_context_and_result(
@@ -93,7 +90,7 @@ def recipe_step_by_step(domain: str) -> None:
 #     st.markdown()
 
 
-def _recipe_view(domain: str, tick: bool) -> None:
+def _recipe_view(domain: str, *, mode: Literal["view", "check"]) -> None:
     repo = RecipeRepo(recipe_store(domain))
 
     tree: GUITree | None = None
@@ -110,7 +107,9 @@ def _recipe_view(domain: str, tick: bool) -> None:
 
         recipe = repo.recipe_tree(event.value)
         with frame_:
-            recipe_view(recipe, show_ticks=tick).expand()
+            if mode == "check":
+                basic_component_view(recipe)
+            recipe_view(recipe, show_ticks=mode == "check").expand()
 
     with frame_:
         gui.select(list(repo.results.keys()), label="Item", on_change=select_item).classes("w-full")

@@ -30,6 +30,19 @@ class RecipeTree:
     def id(self) -> str:
         return self.item.lower().replace(" ", "-")
 
+    def basic_components(self) -> dict[str, float]:
+        """Collect basic (bottom) components as a single list"""
+        result: dict[str, float] = {}
+        self._collect_basic_components(result)
+        return result
+
+    def _collect_basic_components(self, acc: dict[str, float]) -> None:
+        if self.ingredients:
+            for sub in self.ingredients:
+                sub._collect_basic_components(acc)
+        else:
+            acc[self.item] = acc.get(self.item, 0) + self.rate
+
 
 class RecipeStoreProto(Protocol):
     def load_recipes(self) -> Iterable[Recipe]: ...

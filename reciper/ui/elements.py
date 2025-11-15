@@ -4,6 +4,7 @@ from typing import Callable, Literal, TypedDict
 import pydantic
 from nicegui import ui as gui
 
+from reciper.db import RecipeStore
 from reciper.recipe import Recipe, RecipeTree
 from reciper.ui.glue import as_dict
 
@@ -16,11 +17,11 @@ class _RecipeFormInputs(TypedDict):
 
 class RecipeForm(gui.card):
     _form: _RecipeFormInputs
-    on_submit: Callable[[Recipe], None]
+    store: RecipeStore
 
-    def __init__(self, on_submit: Callable[[Recipe], None]) -> None:
+    def __init__(self, store: RecipeStore) -> None:
         super().__init__()
-        self.on_submit = on_submit
+        self.store = store
         with self:
             section_label("Record new recipe")
 
@@ -34,7 +35,7 @@ class RecipeForm(gui.card):
                 section_label("Results")
                 with gui.row().classes("w-full place-content-between"):
                     rate = positive_number("Rate")
-                    item = item_title("Item")
+                    item = item_title("Item", known_items=self.store.known_items)
                     self._form["results"].append((rate, item))
 
                 with gui.row().classes("w-full place-content-around"):
@@ -49,7 +50,7 @@ class RecipeForm(gui.card):
                 section_label("Ingredients")
                 with gui.row().classes("w-full place-content-between"):
                     rate = positive_number("Rate")
-                    item = item_title("Item")
+                    item = item_title("Item", known_items=self.store.known_items)
                     self._form["ingredients"].append((rate, item))
 
                 with gui.row().classes("w-full place-content-around"):
@@ -75,7 +76,7 @@ class RecipeForm(gui.card):
                 results=results,
                 ingredients=ingredients,
             )
-            self.on_submit(recipe)
+            confirm_save_dialog(recipe, lambda: self.store.add_recipe(recipe))
         except pydantic.ValidationError as err:
             gui.notify(str(err), type="negative", position="top", multi_line=True)
             # TODO: forward errors to relevant element
@@ -98,6 +99,16 @@ class RecipeForm(gui.card):
             row.move(self._ingredients, len(self._form[section]))
 
 
+def basic_component_view(tree: RecipeTree) -> gui.tree:
+    return gui.tree(
+        [
+            {"id": f"component_{item}", "label": f"{rate}x {item.capitalize()}"}
+            for item, rate in tree.basic_components().items()
+        ],
+        tick_strategy="leaf",
+    )
+
+
 def recipe_view(recipe: Recipe | RecipeTree, *, show_ticks: bool = False) -> gui.tree:
     result = gui.tree([as_dict(recipe)], tick_strategy="leaf" if show_ticks else None)
     return result
@@ -105,6 +116,7 @@ def recipe_view(recipe: Recipe | RecipeTree, *, show_ticks: bool = False) -> gui
 
 def confirm_save_dialog(recipe: Recipe, on_confirm: Callable[[], None]) -> gui.dialog:
     with gui.dialog(value=True) as result:
+
         def _on_confirm_click() -> None:
             on_confirm()
             _close_and_clear(result)
@@ -131,8 +143,8 @@ def positive_number(label: str) -> gui.number:
     return gui.number(label, value=1.0, min=0.0).classes("w-auto")
 
 
-def item_title(label: str) -> gui.input:
-    return gui.input(label).props("clearable").classes("w-auto")
+def item_title(label: str, *, known_items: list[str] = []) -> gui.input:
+    return gui.input(label, autocomplete=known_items).props("clearable").classes("w-auto")
 
 
 def _gather_dict(inputs: list[tuple[gui.number, gui.input]]) -> dict[str, float]:
