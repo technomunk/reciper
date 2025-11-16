@@ -12,6 +12,7 @@ class RecipeStore:
     domain: str
     _recipes: list[Recipe] = []
     _known_items: set[str] = set()
+    _known_contexts: set[str] = set()
 
     def __init__(self, domain: str) -> None:
         self.domain = domain
@@ -24,9 +25,14 @@ class RecipeStore:
     def known_items(self) -> list[str]:
         return list(self._known_items)
 
-    def _load_known_items(self) -> None:
+    @property
+    def known_contexts(self) -> list[str]:
+        return list(self._known_contexts)
+
+    def _load_known(self) -> None:
         for recipe in self._recipes:
             self._known_items.update(recipe.results.keys(), recipe.ingredients.keys())
+            self._known_contexts.add(recipe.context)
 
     def load_recipes(self) -> list[Recipe]:
         if self._recipes:
@@ -36,7 +42,7 @@ class RecipeStore:
             with open(self._filename, "rb") as f:
                 json_data = f.read()
             self._recipes = _list_adapter.validate_json(json_data)
-            self._load_known_items()
+            self._load_known()
             return self._recipes
         except FileNotFoundError:
             return []

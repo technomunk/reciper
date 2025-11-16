@@ -26,7 +26,9 @@ class RecipeForm(gui.card):
             section_label("Record new recipe")
 
             self._form = {
-                "context": gui.input("Context").classes("w-full"),
+                "context": gui.input("Context", autocomplete=self.store.known_contexts).classes(
+                    "w-full"
+                ),
                 "results": [],
                 "ingredients": [],
             }

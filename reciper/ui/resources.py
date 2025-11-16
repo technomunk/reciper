@@ -5,4 +5,6 @@ from reciper.db import RecipeStore
 
 @cache
 def recipe_store(domain: str) -> RecipeStore:
-    return RecipeStore(domain)
+    result = RecipeStore(domain)
+    result.load_recipes()
+    return result
