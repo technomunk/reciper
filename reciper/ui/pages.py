@@ -112,4 +112,4 @@ def _recipe_view(domain: str, *, mode: Literal["view", "check"]) -> None:
             recipe_view(recipe, show_ticks=mode == "check").expand()
 
     with frame_:
-        gui.select(list(repo.results.keys()), label="Item", on_change=select_item).classes("w-full")
+        gui.select(list(sorted(repo.results.keys())), label="Item", on_change=select_item).classes("w-full")

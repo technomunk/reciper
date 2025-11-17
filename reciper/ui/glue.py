@@ -2,6 +2,7 @@ from functools import singledispatch
 from typing import NotRequired, TypedDict
 
 from reciper.recipe import Recipe, RecipeTree
+from reciper.ui.format import item_rate
 
 
 class RecipeDict(TypedDict):
@@ -9,7 +10,7 @@ class RecipeDict(TypedDict):
     label: str
     context: NotRequired[str]
     children: NotRequired[list["RecipeDict"]]
- 
+
 
 @singledispatch
 def as_dict(recipe: Recipe | RecipeTree) -> RecipeDict:
@@ -20,7 +21,7 @@ def as_dict(recipe: Recipe | RecipeTree) -> RecipeDict:
 def _(recipe: Recipe) -> RecipeDict:
     return {
         "id": "recipe",
-        "label": f"[{recipe.context}]",
+        "label": f"[{recipe.context.title()}]",
         "children": [
             {
                 "id": "results",
@@ -28,7 +29,7 @@ def _(recipe: Recipe) -> RecipeDict:
                 "children": [
                     {
                         "id": f"result_{n}",
-                        "label": f"{r}x {n.capitalize()}",
+                        "label": item_rate(n, r),
                     }
                     for n, r in recipe.results.items()
                 ],
@@ -39,7 +40,7 @@ def _(recipe: Recipe) -> RecipeDict:
                 "children": [
                     {
                         "id": f"ingredient_{n}",
-                        "label": f"{r}x {n.capitalize()}",
+                        "label": item_rate(n, r),
                     }
                     for n, r in recipe.ingredients.items()
                 ],
@@ -56,7 +57,7 @@ def _(recipe: RecipeTree) -> RecipeDict:
 def _recipe_tree_as_dict(tree: RecipeTree, id_prefix: str) -> RecipeDict:
     result: RecipeDict = {
         "id": id_prefix + tree.id,
-        "label": f"{tree.rate}x {tree.item}",
+        "label": item_rate(tree.item, tree.rate),
     }
     if tree.context:
         result["context"] = tree.context

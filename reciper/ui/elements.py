@@ -6,6 +6,7 @@ from nicegui import ui as gui
 
 from reciper.db import RecipeStore
 from reciper.recipe import Recipe, RecipeTree
+from reciper.ui.format import item_rate
 from reciper.ui.glue import as_dict
 
 
@@ -93,7 +94,7 @@ class RecipeForm(gui.card):
     def _add_row(self, section: Literal["results", "ingredients"]) -> None:
         with gui.row().classes("w-full place-content-between") as row:
             rate = positive_number("Rate")
-            item = item_title("Item")
+            item = item_title("Item", known_items=self.store.known_items)
             self._form[section].append((rate, item))
         if section == "results":
             row.move(self._results, len(self._form[section]))
@@ -104,7 +105,7 @@ class RecipeForm(gui.card):
 def basic_component_view(tree: RecipeTree) -> gui.tree:
     return gui.tree(
         [
-            {"id": f"component_{item}", "label": f"{rate}x {item.capitalize()}"}
+            {"id": f"component_{item}", "label": item_rate(item, rate)}
             for item, rate in tree.basic_components().items()
         ],
         tick_strategy="leaf",

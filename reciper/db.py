@@ -57,6 +57,7 @@ class RecipeStore:
         recipes = self.load_recipes()
         recipes.append(recipe)
         self._known_items.update(recipe.results.keys(), recipe.ingredients.keys())
+        self._known_contexts.add(recipe.context)
 
         json_data = _list_adapter.dump_json(recipes)
         with open(self._filename, "wb") as f:
